@@ -1,11 +1,13 @@
 import logging
 from contextlib import closing
+from pathlib import Path
 from typing import Any, List
 
 import duckdb
 import mcp.server.stdio
 import mcp.types as types
 from mcp.server import Server
+from mcp_server_duckdb.lib.handler import DuckDbTools
 from pydantic import AnyUrl
 
 from mcp_server_duckdb import Config
@@ -17,30 +19,20 @@ logger.info("Starting MCP DuckDB Server")
 class DuckDBDatabase:
     def __init__(self, config: Config):
         self.config = config
-
-        dir_path = config.db_path.parent
-        if not dir_path.exists():
-            if config.readonly:
-                raise ValueError(f"Database directory does not exist: {dir_path} in read-only mode")
-
-            logger.info(f"Creating directory: {dir_path}")
-            dir_path.mkdir(parents=True)
-
-        if not config.db_path.exists():
-            if config.readonly:
-                raise ValueError(f"Database file does not exist: {dir_path} in read-only mode")
-
-            logger.info(f"Creating DuckDB database: {config.db_path}")
-            duckdb.connect(config.db_path).close()
-
         self.db_path = config.db_path
+        self.db_in_memory = config.db_in_memory
+        self.readonly = config.readonly
 
-    def connect(self):
-        return duckdb.connect(self.db_path, read_only=self.config.readonly)
-
-    def execute_query(self, query: object, parameters: object = None) -> List[Any]:
-        with closing(self.connect()) as connection:
-            return connection.execute(query, parameters).fetchall()
+        if self.db_in_memory:
+            self.handler = DuckDbTools(
+                db_path=':memory:',
+                read_only=self.readonly,
+            )
+        else:
+            self.handler = DuckDbTools(
+                db_path=self.db_path.as_uri(),
+                read_only=self.readonly,
+            )
 
 
 async def main(config: Config):
@@ -101,6 +93,161 @@ async def main(config: Config):
                     "required": ["query"],
                 },
             ),
+            types.Tool(
+                name="show_tables",
+                description="Show all tables in the DuckDB database",
+            ),
+            types.Tool(
+                name="describe_table",
+                description="Describe a table in the DuckDB database",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "table": {
+                            "type": "string",
+                            "description": "Name of table to describe"
+                        }
+                    },
+                    "required": ["table"]
+                }
+            ),
+            types.Tool(
+                name="inspect_query",
+                description="Inspect a query in the DuckDB database",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "SQL query to inspect"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            ),
+            types.Tool(
+                name="create_table_from_path",
+                description="Create a table from a file path",
+                inputSchema={
+                    "type": "object", 
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Path to the file to load"
+                        },
+                        "table": {
+                            "type": "string",
+                            "description": "Optional table name to use"
+                        },
+                        "replace": {
+                            "type": "boolean", 
+                            "description": "Whether to replace existing table",
+                            "default": False
+                        }
+                    },
+                    "required": ["path"]
+                }
+            ),
+            types.Tool(
+                name="create_table_from_url",
+                description="Create a table from a URL",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "url": {
+                            "type": "string",
+                            "description": "URL to the file to load"
+                        },
+                        "table": {
+                            "type": "string",
+                            "description": "Optional table name to use"
+                        },
+                        "replace": {
+                            "type": "boolean",
+                            "description": "Whether to replace existing table", 
+                            "default": False
+                        }
+                    },
+                    "required": ["url"]
+                }
+            ),
+            types.Tool(
+                name="create_table_from_s3",
+                description="Create a table from an S3 path",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "S3 path to the file to load"
+                        },
+                        "table": {
+                            "type": "string",
+                            "description": "Optional table name to use"
+                        }
+                    },
+                    "required": ["path"]
+                }
+            ),
+            types.Tool(
+                name="create_table_from_csv",
+                description="Create a table from a CSV file",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Path to the CSV file"
+                        },
+                        "table": {
+                            "type": "string",
+                            "description": "Optional table name to use"
+                        },
+                        "delimiter": {
+                            "type": "string",
+                            "description": "Optional delimiter to use"
+                        }
+                    },
+                    "required": ["path"]
+                }
+            ),
+            types.Tool(
+                name="summarize_table", 
+                description="Get summary statistics for a table",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "table": {
+                            "type": "string",
+                            "description": "Name of table to summarize"
+                        }
+                    },
+                    "required": ["table"]
+                }
+            ),
+            types.Tool(
+                name="export_table_to_path",
+                description="Export a table to a file",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "table": {
+                            "type": "string", 
+                            "description": "Name of table to export"
+                        },
+                        "format": {
+                            "type": "string",
+                            "description": "Format to export as (default: parquet)",
+                            "default": "PARQUET"
+                        },
+                        "path": {
+                            "type": "string",
+                            "description": "Optional path to export to"
+                        }
+                    },
+                    "required": ["table"]
+                }
+            )
         ]
 
         return tools
@@ -113,13 +260,86 @@ async def main(config: Config):
         try:
             if not arguments:
                 raise ValueError("Missing arguments")
-
+            
             if name == "query":
-                results = db.execute_query(arguments["query"])
+                results = db.handler.run_query(arguments["query"])
+                return [types.TextContent(type="text", text=str(results))]
+            
+            elif name == "show_tables":
+                results = db.handler.show_tables(
+                    show_tables=True
+                )
+                return [types.TextContent(type="text", text=str(results))]
+            
+            elif name == "describe_table":
+                results = db.handler.describe_table(arguments["table"])
+                return [types.TextContent(type="text", text=str(results))]
+            
+            elif name == "inspect_query":
+                results = db.handler.inspect_query(arguments["query"])
+                return [types.TextContent(type="text", text=str(results))]
+            
+            elif name == "create_table_from_path":  
+                results = db.handler.create_table_from_path(
+                    path=arguments["path"],
+                    table=arguments["table"],
+                    replace=arguments["replace"]
+                )
+                return [types.TextContent(type="text", text=str(results))]
+            
+            elif name == "load_local_path_to_table":
+                results = db.handler.load_local_path_to_table(
+                    path=arguments["path"],
+                    table=arguments["table"]
+                )
+                return [types.TextContent(type="text", text=str(results))]
+            elif name == "load_local_csv_to_table":
+                results = db.handler.load_local_csv_to_table(
+                    path=arguments["path"],
+                    table=arguments["table"],
+                    delimiter=arguments.get("delimiter")
+                )
+                return [types.TextContent(type="text", text=str(results))]
+            elif name == "load_s3_path_to_table":
+                results = db.handler.load_s3_path_to_table(
+                    path=arguments["path"],
+                    table=arguments["table"]
+                )
+                return [types.TextContent(type="text", text=str(results))]
+            elif name == "load_s3_csv_to_table":
+                results = db.handler.load_s3_csv_to_table(
+                    path=arguments["path"],
+                    table=arguments["table"],
+                    delimiter=arguments.get("delimiter")
+                )
+                return [types.TextContent(type="text", text=str(results))]
+            elif name == "create_fts_index":
+                results = db.handler.create_fts_index(
+                    table=arguments["table"],
+                    unique_key=arguments["unique_key"],
+                    input_values=arguments["input_values"]
+                )
+                return [types.TextContent(type="text", text=str(results))]
+            elif name == "full_text_search":
+                results = db.handler.full_text_search(
+                    table=arguments["table"],
+                    unique_key=arguments["unique_key"],
+                    search_text=arguments["search_text"]
+                )
+                return [types.TextContent(type="text", text=str(results))]
+            elif name == "summarize_table":
+                results = db.handler.summarize_table(arguments["table"])
+                return [types.TextContent(type="text", text=str(results))]
+            
+            elif name == "export_table":
+                results = db.handler.export_table_to_path(
+                    table=arguments["table"],
+                    format=arguments["format"],
+                    path=arguments["path"]
+                )
                 return [types.TextContent(type="text", text=str(results))]
             else:
                 raise ValueError(f"Unknown tool: {name}")
-
         except duckdb.Error as e:
             return [types.TextContent(type="text", text=f"Database error: {str(e)}")]
         except Exception as e:
