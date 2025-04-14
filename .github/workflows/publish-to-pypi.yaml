@@ -25,6 +25,15 @@ jobs:
       - name: Set up Python
         run: uv python install 3.10
 
+      - name: Get latest tag
+        id: latest_tag
+        run: |
+          TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
+          echo "tag=$TAG" >> $GITHUB_ENV
+
+      - name: Update version
+        run: uv bump --version ${{ env.tag }}
+
       - name: Build
         run: uv build
 
