@@ -79,7 +79,7 @@ The server implements the following database interaction tools:
   - **Input**: `table` (string) - Name of table to summarize
   - **Output**: Statistical summary of the table's contents
 
-- **export_table**: Export a table to a file
+- **export_table_to_path**: Export a table to a file
   - **Input**:
     - `table` (string) - Name of table to export
     - `format` (string, optional) - Format to export as (default: parquet)

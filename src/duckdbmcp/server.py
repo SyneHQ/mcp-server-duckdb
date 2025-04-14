@@ -271,9 +271,7 @@ async def main(config: Config):
                 return [types.TextContent(type="text", text=str(results))]
             
             elif name == "show_tables":
-                results = db.handler.show_tables(
-                    show_tables=True
-                )
+                results = db.handler.show_tables(True)
                 return [types.TextContent(type="text", text=str(results))]
             
             elif name == "describe_table":
@@ -287,60 +285,43 @@ async def main(config: Config):
             elif name == "create_table_from_path":  
                 results = db.handler.create_table_from_path(
                     path=arguments["path"],
-                    table=arguments["table"],
-                    replace=arguments["replace"]
+                    table=arguments.get("table"),
+                    replace=arguments.get("replace", False)
                 )
                 return [types.TextContent(type="text", text=str(results))]
             
-            elif name == "load_local_path_to_table":
-                results = db.handler.load_local_path_to_table(
-                    path=arguments["path"],
-                    table=arguments["table"]
+            elif name == "create_table_from_url":
+                results = db.handler.create_table_from_path(
+                    path=arguments["url"],
+                    table=arguments.get("table"),
+                    replace=arguments.get("replace", False)
                 )
                 return [types.TextContent(type="text", text=str(results))]
-            elif name == "load_local_csv_to_table":
-                results = db.handler.load_local_csv_to_table(
-                    path=arguments["path"],
-                    table=arguments["table"],
-                    delimiter=arguments.get("delimiter")
-                )
-                return [types.TextContent(type="text", text=str(results))]
-            elif name == "load_s3_path_to_table":
+            
+            elif name == "create_table_from_s3":
                 results = db.handler.load_s3_path_to_table(
                     path=arguments["path"],
-                    table=arguments["table"]
+                    table=arguments.get("table")
                 )
                 return [types.TextContent(type="text", text=str(results))]
-            elif name == "load_s3_csv_to_table":
-                results = db.handler.load_s3_csv_to_table(
+            
+            elif name == "create_table_from_csv":
+                results = db.handler.load_local_csv_to_table(
                     path=arguments["path"],
-                    table=arguments["table"],
+                    table=arguments.get("table"),
                     delimiter=arguments.get("delimiter")
                 )
                 return [types.TextContent(type="text", text=str(results))]
-            elif name == "create_fts_index":
-                results = db.handler.create_fts_index(
-                    table=arguments["table"],
-                    unique_key=arguments["unique_key"],
-                    input_values=arguments["input_values"]
-                )
-                return [types.TextContent(type="text", text=str(results))]
-            elif name == "full_text_search":
-                results = db.handler.full_text_search(
-                    table=arguments["table"],
-                    unique_key=arguments["unique_key"],
-                    search_text=arguments["search_text"]
-                )
-                return [types.TextContent(type="text", text=str(results))]
+            
             elif name == "summarize_table":
                 results = db.handler.summarize_table(arguments["table"])
                 return [types.TextContent(type="text", text=str(results))]
             
-            elif name == "export_table":
+            elif name == "export_table_to_path":
                 results = db.handler.export_table_to_path(
                     table=arguments["table"],
-                    format=arguments["format"],
-                    path=arguments["path"]
+                    format=arguments.get("format", "PARQUET"),
+                    path=arguments.get("path")
                 )
                 return [types.TextContent(type="text", text=str(results))]
             else:
