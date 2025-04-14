@@ -1,5 +1,5 @@
 [project]
-name = "mcp-server-duckdb"
+name = "mcp-server-duckdb-tool"
 version = "0.0.2"
 description = "A DuckDB MCP server"
 readme = "README.md"
