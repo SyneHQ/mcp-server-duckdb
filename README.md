@@ -145,7 +145,7 @@ Location: `%APPDATA%/Claude/claude_desktop_config.json`
 }
 ```
 
-* Note: `~/mcp-server-duckdb/data/data.db` should be replaced with the actual path to the DuckDB database file.
+> * Note: `~/mcp-server-duckdb/data/data.db` should be replaced with the actual path to the DuckDB database file.
 
 ## Development
 
