@@ -96,6 +96,11 @@ async def main(config: Config):
             types.Tool(
                 name="show_tables",
                 description="Show all tables in the DuckDB database",
+                inputSchema={
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
             ),
             types.Tool(
                 name="describe_table",
