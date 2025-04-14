@@ -55,7 +55,6 @@ class DuckDbTools:
         if show_tables:
             stmt = "SHOW TABLES;"
             tables = self.run_query(stmt)
-            print(f"Tables: {tables}")
             return tables
         return "No tables to show"
 

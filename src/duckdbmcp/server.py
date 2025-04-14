@@ -98,7 +98,13 @@ async def main(config: Config):
                 description="Show all tables in the DuckDB database",
                 inputSchema={
                     "type": "object",
-                    "properties": {},
+                    "properties": {
+                        "include_views": {
+                            "type": "boolean",
+                            "description": "Whether to include views in the result",
+                            "default": False
+                        }
+                    },
                     "required": []
                 }
             ),
