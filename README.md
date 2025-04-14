@@ -1,6 +1,6 @@
 # mcp-server-duckdb
 
-[![PyPI - Version](https://img.shields.io/pypi/v/mcp-server-duckdb)](https://pypi.org/project/mcp-server-duckdb/)
+[![PyPI - Version](https://img.shields.io/pypi/v/mcp-server-duckdb)](https://pypi.org/project/duckdbmcp/)
 [![PyPI - License](https://img.shields.io/pypi/l/mcp-server-duckdb)](LICENSE)
 [![smithery badge](https://smithery.ai/badge/mcp-server-duckdb)](https://smithery.ai/server/mcp-server-duckdb)
 
@@ -114,10 +114,10 @@ The server implements the following database interaction tools:
 
 ### Installing via Smithery
 
-To install DuckDB Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/mcp-server-duckdb):
+To install DuckDB Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/duckdbmcp):
 
 ```bash
-npx -y @smithery/cli install mcp-server-duckdb --client claude
+npx -y @smithery/cli install duckdbmcp --client claude
 ```
 
 ### Claude Desktop Integration
@@ -136,16 +136,16 @@ Location: `%APPDATA%/Claude/claude_desktop_config.json`
     "duckdb": {
       "command": "uvx",
       "args": [
-        "mcp-server-duckdb",
+        "duckdbmcp",
         "--db-path",
-        "~/mcp-server-duckdb/data/data.db"
+        "~/duckdbmcp/data/data.db"
       ]
     }
   }
 }
 ```
 
-> * Note: `~/mcp-server-duckdb/data/data.db` should be replaced with the actual path to the DuckDB database file.
+> * Note: `~/duckdbmcp/data/data.db` should be replaced with the actual path to the DuckDB database file.
 
 ## Development
 
@@ -163,7 +163,7 @@ Debugging MCP servers can be challenging due to their stdio-based communication.
 
 1. Install the inspector using npm:
 ```bash
-npx @modelcontextprotocol/inspector uv --directory ~/codes/mcp-server-duckdb run mcp-server-duckdb --db-path ~/mcp-server-duckdb/data/data.db
+npx @modelcontextprotocol/inspector uv --directory ~/codes/duckdbmcp run duckdbmcp --db-path ~/duckdbmcp/data/data.db
 ```
 
 2. Open the provided URL in your browser to access the debugging interface

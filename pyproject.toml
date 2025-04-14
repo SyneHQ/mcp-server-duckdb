@@ -1,5 +1,5 @@
 [project]
-name = "mcp-server-duckdb-tool"
+name = "duckdbmcp"
 version = "0.0.2"
 description = "A DuckDB MCP server"
 readme = "README.md"
@@ -30,7 +30,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project.scripts]
-mcp-server-duckdb = "mcp_server_duckdb:main"
+duckdbmcp = "duckdbmcp:main"
 
 [tool.ruff]
 line-length = 120

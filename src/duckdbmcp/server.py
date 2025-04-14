@@ -12,7 +12,7 @@ from pydantic import AnyUrl
 
 from mcp_server_duckdb import Config
 
-logger = logging.getLogger("mcp-server-duckdb")
+logger = logging.getLogger("duckdbmcp")
 logger.info("Starting MCP DuckDB Server")
 
 
