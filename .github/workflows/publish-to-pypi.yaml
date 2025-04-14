@@ -32,7 +32,8 @@ jobs:
           echo "tag=$TAG" >> $GITHUB_ENV
 
       - name: Update version
-        run: uv bump --version ${{ env.tag }}
+        run: |
+          sed -i "s/^version = .*/version = \"$TAG\"/" pyproject.toml
 
       - name: Build
         run: uv build
