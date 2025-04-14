@@ -1,6 +1,6 @@
 import asyncio
 
-from mcp_server_duckdb.config import Config
+from duckdbmcp.config import Config
 
 from . import server
 

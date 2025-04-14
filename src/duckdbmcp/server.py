@@ -7,10 +7,10 @@ import duckdb
 import mcp.server.stdio
 import mcp.types as types
 from mcp.server import Server
-from mcp_server_duckdb.lib.handler import DuckDbTools
+from duckdbmcp.lib.handler import DuckDbTools
 from pydantic import AnyUrl
 
-from mcp_server_duckdb import Config
+from duckdbmcp import Config
 
 logger = logging.getLogger("duckdbmcp")
 logger.info("Starting MCP DuckDB Server")

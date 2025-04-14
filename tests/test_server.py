@@ -9,8 +9,8 @@ from pathlib import Path
 import duckdb
 import pytest
 
-from mcp_server_duckdb.config import Config
-from mcp_server_duckdb.server import DuckDBDatabase
+from duckdbmcp.config import Config
+from duckdbmcp.server import DuckDBDatabase
 
 
 def test_create_database_in_nonexistent_directory():

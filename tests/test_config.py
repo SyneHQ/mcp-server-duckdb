@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from mcp_server_duckdb.config import Config
+from duckdbmcp.config import Config
 
 
 def test_config_required_db_path():
