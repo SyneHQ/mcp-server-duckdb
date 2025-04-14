@@ -1,6 +1,6 @@
 [project]
 name = "duckdbmcp"
-version = "0.0.2"
+version = "0.0.3"
 description = "A DuckDB MCP server"
 readme = "README.md"
 license = { file = "LICENSE" }
