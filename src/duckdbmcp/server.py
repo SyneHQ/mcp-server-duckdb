@@ -94,6 +94,20 @@ async def main(config: Config):
                 },
             ),
             types.Tool(
+                name="is_table_exists",
+                description="Check if a table exists in the DuckDB database",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "table": {
+                            "type": "string",
+                            "description": "Name of table to check"
+                        }
+                    },
+                    "required": ["table"]
+                }
+            ),
+            types.Tool(
                 name="show_tables",
                 description="Show all tables in the DuckDB database",
                 inputSchema={
@@ -248,17 +262,38 @@ async def main(config: Config):
                         },
                         "format": {
                             "type": "string",
-                            "description": "Format to export as (default: parquet)",
+                            "description": "Format to export in (default: parquet)",
                             "default": "PARQUET"
                         },
                         "path": {
                             "type": "string",
-                            "description": "Optional path to export to"
+                            "description": "Path to export to"
                         }
                     },
                     "required": ["table"]
                 }
-            )
+            ),
+            types.Tool(
+                name="smart_load_multiple_csv_files",
+                description="Load multiple CSV files and intelligently name the tables based on content analysis",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "paths": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "description": "List of paths to CSV files"
+                        },
+                        "delimiter": {
+                            "type": "string",
+                            "description": "Optional delimiter to use for all CSV files"
+                        }
+                    },
+                    "required": ["paths"]
+                }
+            ),
         ]
 
         return tools
@@ -274,6 +309,10 @@ async def main(config: Config):
             
             if name == "query":
                 results = db.handler.run_query(arguments["query"])
+                return [types.TextContent(type="text", text=str(results))]
+            
+            if name == "is_table_exists":
+                results = db.handler.is_table_exists(arguments["table"])
                 return [types.TextContent(type="text", text=str(results))]
             
             elif name == "show_tables":
@@ -330,6 +369,18 @@ async def main(config: Config):
                     path=arguments.get("path")
                 )
                 return [types.TextContent(type="text", text=str(results))]
+                
+            elif name == "smart_load_multiple_csv_files":
+                results = db.handler.smart_load_multiple_csv_files(
+                    paths=arguments["paths"],
+                    delimiter=arguments.get("delimiter"),
+                )
+                # Format the results as a readable table mapping with descriptions
+                formatted_results = "Original Table Name → Smart Table Name → Description\n"
+                formatted_results += "---------------------------------------------------------\n"
+                for original in results:
+                    formatted_results += f"{original}\n"
+                return [types.TextContent(type="text", text=formatted_results)]
             else:
                 raise ValueError(f"Unknown tool: {name}")
         except duckdb.Error as e:

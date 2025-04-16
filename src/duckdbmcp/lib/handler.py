@@ -57,6 +57,14 @@ class DuckDbTools:
             tables = self.run_query(stmt)
             return tables
         return "No tables to show"
+    
+    def is_table_exists(self, table: str) -> bool:
+        """Function to check if a table exists in the database
+
+        :param table: Table to check
+        :return: True if the table exists, False otherwise
+        """
+        return self.run_query(f"SELECT * FROM {table};") is not None
 
     def describe_table(self, table: str) -> str:
         """Function to describe a table
@@ -66,8 +74,6 @@ class DuckDbTools:
         """
         stmt = f"DESCRIBE {table};"
         table_description = self.run_query(stmt)
-
-        print(f"Table description: {table_description}")
         return f"{table}\n{table_description}"
 
     def inspect_query(self, query: str) -> str:
@@ -96,8 +102,6 @@ class DuckDbTools:
         formatted_sql = formatted_sql.split(";")[0]
 
         try:
-            print(f"Running: {formatted_sql}")
-
             query_result = self.connection.sql(formatted_sql)
             result_output = "No output"
             if query_result is not None:
@@ -115,7 +119,6 @@ class DuckDbTools:
                 except AttributeError:
                     result_output = str(query_result)
 
-            print(f"Query result: {result_output}")
             return result_output
         except duckdb.ProgrammingError as e:
             return str(e)
@@ -124,7 +127,7 @@ class DuckDbTools:
         except Exception as e:
             return str(e)
 
-    def summarize_table(self, table: str) -> str:
+    def summarize_table(self, table: str, metadata: bool = False) -> str:
         """Function to compute a number of aggregates over a table.
         The function launches a query that computes a number of aggregates over all columns,
         including min, max, avg, std and approx_unique.
@@ -133,8 +136,18 @@ class DuckDbTools:
         :return: Summary of the table
         """
         table_summary = self.run_query(f"SUMMARIZE {table};")
+        # we can aslo get data from table_metadata
+        # check if table_metadata exists
+        table_metadata = None
+        if metadata:
+            table_metadata = self.run_query("SELECT * FROM table_metadata;")
+            if table_metadata:
+                table_summary += f"\n\nTable Description: {table_metadata}"
+            else:
+                table_data = self.run_query(f"SELECT description FROM table_metadata WHERE original_name ILIKE '%{table}%' or current_name ILIKE '%{table}%';")
+                if table_data:
+                    table_summary += f"\n\nTable Description: {table_data}"
 
-        print(f"Table description: {table_summary}")
         return table_summary
 
     def get_table_name_from_path(self, path: str) -> str:
@@ -166,14 +179,12 @@ class DuckDbTools:
         if table is None:
             table = self.get_table_name_from_path(path)
 
-        print(f"Creating table {table} from {path}")
         create_statement = "CREATE TABLE IF NOT EXISTS"
         if replace:
             create_statement = "CREATE OR REPLACE TABLE"
 
         create_statement += f" '{table}' AS SELECT * FROM '{path}';"
         self.run_query(create_statement)
-        print(f"Created table {table} from {path}")
         return table
 
     def export_table_to_path(self, table: str, format: Optional[str] = "PARQUET", path: Optional[str] = None) -> str:
@@ -190,14 +201,12 @@ class DuckDbTools:
         if format is None:
             format = "PARQUET"
 
-        print(f"Exporting Table {table} as {format.upper()} to path {path}")
         if path is None:
             path = f"{table}.{format}"
         else:
             path = f"{path}/{table}.{format}"
         export_statement = f"COPY (SELECT * FROM {table}) TO '{path}' (FORMAT {format.upper()});"
         result = self.run_query(export_statement)
-        print(f"Exported {table} to {path}/{table}")
         return result
 
     def load_local_path_to_table(self, path: str, table: Optional[str] = None) -> Tuple[str, str]:
@@ -208,8 +217,6 @@ class DuckDbTools:
         :return: Table name, SQL statement used to load the file
         """
         import os
-
-        print(f"Loading {path} into duckdb")
 
         if table is None:
             # Get the file name from the s3 path
@@ -222,7 +229,6 @@ class DuckDbTools:
         create_statement = f"CREATE OR REPLACE TABLE '{table}' AS SELECT * FROM '{path}';"
         self.run_query(create_statement)
 
-        print(f"Loaded {path} into duckdb as {table}")
         return table, create_statement
 
     def load_local_csv_to_table(
@@ -236,8 +242,6 @@ class DuckDbTools:
         :return: Table name, SQL statement used to load the file
         """
         import os
-
-        print(f"Loading {path} into duckdb")
 
         if table is None:
             # Get the file name from the s3 path
@@ -256,7 +260,6 @@ class DuckDbTools:
         create_statement = f"CREATE OR REPLACE TABLE '{table}' AS {select_statement};"
         self.run_query(create_statement)
 
-        print(f"Loaded CSV {path} into duckdb as {table}")
         return table, create_statement
 
     def load_s3_path_to_table(self, path: str, table: Optional[str] = None) -> Tuple[str, str]:
@@ -267,8 +270,6 @@ class DuckDbTools:
         :return: Table name, SQL statement used to load the file
         """
         import os
-
-        print(f"Loading {path} into duckdb")
 
         if table is None:
             # Get the file name from the s3 path
@@ -303,7 +304,7 @@ class DuckDbTools:
             # Get the file name without extension from the s3 path
             table, extension = os.path.splitext(file_name)
             # If the table isn't a valid SQL identifier, we'll need to use something else
-            table = table.replace("-", "_").replace(".", "_").replace(" ", "_").replace("/", "_")
+            table = table.replace("-", "_").replace(".", "_").replace(" ", "_").replace("/", "_").split("?")[0]
 
         select_statement = f"SELECT * FROM read_csv('{path}'"
         if delimiter is not None:
@@ -357,3 +358,44 @@ class DuckDbTools:
         print(f"Search results for {search_text} in {table}")
 
         return result
+
+    def load_multiple_csv_files(self, paths: list[str], delimiter: Optional[str] = None) -> list[str]:
+        """Load multiple CSV files into duckdb tables
+
+        :param paths: List of paths to load from http urls
+        :param delimiter: Optional delimiter to use for all files
+        :return: List of table names created
+        """
+        print(f"Loading {len(paths)} CSV files into duckdb")
+        
+        table_names = []
+
+        def load_table(path):
+            table_name, _ = self.load_s3_csv_to_table(
+                path=path, 
+                table=None,  # Use default naming initially
+                delimiter=delimiter
+            )
+            return table_name
+        # Process files sequentially without threading
+        results = [load_table(path) for path in paths]
+
+        table_names.extend(results)
+        
+        return table_names
+             
+    def smart_load_multiple_csv_files(self, paths: list[str], delimiter: Optional[str] = None) -> list[str]:
+        """Load multiple CSV files into duckdb and assign smart names
+
+        :param paths: List of paths to load
+        :param delimiter: Optional delimiter to use for all files
+        :param use_llm: Whether to use LLM for naming (requires GEMINI_API_KEY)
+        :return: List of original table names
+        """
+        print(f"Smart loading {len(paths)} CSV files into duckdb")
+        
+        # First load all files with default names
+        original_tables = self.load_multiple_csv_files(paths, delimiter)
+        print(f"Original tables: {original_tables}")
+        
+        return original_tables

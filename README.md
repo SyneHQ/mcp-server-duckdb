@@ -85,6 +85,12 @@ The server implements the following database interaction tools:
     - `format` (string, optional) - Format to export as (default: parquet)
     - `path` (string, optional) - Path to export to
 
+- **smart_load_multiple_csv_files**: Load multiple CSV files and intelligently name the tables
+  - **Input**:
+    - `paths` (array of strings) - List of paths to CSV files
+    - `delimiter` (string, optional) - Delimiter to use for all CSV files
+  - **Output**: Mapping of original table names
+
 > [!NOTE]
 > While the server provides specialized functions for common operations, it also maintains the unified `query` function for maximum flexibility. Modern LLMs can generate appropriate SQL for any database operation (SELECT, CREATE TABLE, JOIN, etc.).
 
